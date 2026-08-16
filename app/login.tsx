@@ -1,9 +1,8 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Fingerprint, Lock, Smartphone } from 'lucide-react-native';
+import { Fingerprint, Lock } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    Alert,
     BackHandler,
     SafeAreaView,
     StatusBar,
@@ -14,12 +13,8 @@ import {
 } from 'react-native';
 import { COLORS } from '../constants/AppConstants';
 
-const FALLBACK_PIN = '1991';
-
 export default function LoginScreen() {
-    const [pin, setPin] = useState('');
     const [biometricSupported, setBiometricSupported] = useState(false);
-    const [showManualPin, setShowManualPin] = useState(false);
     const router = useRouter();
 
     // Block hardware back button on login screen
@@ -36,17 +31,25 @@ export default function LoginScreen() {
         (async () => {
             const compatible = await LocalAuthentication.hasHardwareAsync();
             const enrolled = await LocalAuthentication.isEnrolledAsync();
-            setBiometricSupported(compatible && enrolled);
+            const isSupported = compatible && enrolled;
+            setBiometricSupported(isSupported);
+            
+            if (!isSupported) {
+                // Bypass login if no security is set on the device
+                router.replace('/(tabs)');
+            }
         })();
     }, []);
 
     // Auto-trigger device authentication when screen is focused
     useFocusEffect(
         useCallback(() => {
-            const timer = setTimeout(() => {
-                authenticateWithDevice();
-            }, 400);
-            return () => clearTimeout(timer);
+            if (biometricSupported) {
+                const timer = setTimeout(() => {
+                    authenticateWithDevice();
+                }, 400);
+                return () => clearTimeout(timer);
+            }
         }, [biometricSupported])
     );
 
@@ -54,55 +57,16 @@ export default function LoginScreen() {
         try {
             const result = await LocalAuthentication.authenticateAsync({
                 promptMessage: 'Unlock Expense Manager',
-                cancelLabel: 'Use PIN',
-                fallbackLabel: 'Use PIN',
                 disableDeviceFallback: false, // Allow device passcode/PIN fallback
             });
 
             if (result.success) {
                 router.replace('/(tabs)');
-            } else if (result.error === 'user_cancel' || result.error === 'system_cancel') {
-                // User cancelled — show manual PIN pad
-                setShowManualPin(true);
             }
         } catch {
-            // Device doesn't support biometrics — fall back to manual PIN
-            setShowManualPin(true);
+            // Handle error silently, allow user to press the button to try again
         }
     };
-
-    const handlePress = (num: string) => {
-        if (pin.length < 4) {
-            setPin(prev => prev + num);
-        }
-    };
-
-    const handleDelete = () => {
-        setPin(prev => prev.slice(0, -1));
-    };
-
-    // Validate manual PIN entry
-    useEffect(() => {
-        if (pin.length === 4) {
-            if (pin === FALLBACK_PIN) {
-                router.replace('/(tabs)');
-            } else {
-                Alert.alert('Incorrect PIN', 'Please try again.', [
-                    { text: 'OK', onPress: () => setPin('') }
-                ]);
-            }
-        }
-    }, [pin]);
-
-    const renderDigit = (num: string) => (
-        <TouchableOpacity
-            key={num}
-            style={styles.digitButton}
-            onPress={() => handlePress(num)}
-        >
-            <Text style={styles.digitText}>{num}</Text>
-        </TouchableOpacity>
-    );
 
     return (
         <SafeAreaView style={styles.container}>
@@ -114,14 +78,12 @@ export default function LoginScreen() {
                     </View>
                     <Text style={styles.title}>Welcome Back</Text>
                     <Text style={styles.subtitle}>
-                        {showManualPin
-                            ? 'Enter your app PIN to continue'
-                            : 'Use your device lock to continue'}
+                        Use your device lock to continue
                     </Text>
                 </View>
 
                 {/* Device Auth Button */}
-                {!showManualPin && (
+                {biometricSupported && (
                     <TouchableOpacity
                         style={styles.biometricButton}
                         onPress={authenticateWithDevice}
@@ -133,68 +95,6 @@ export default function LoginScreen() {
                         </Text>
                     </TouchableOpacity>
                 )}
-
-                {/* Manual PIN Fallback */}
-                {showManualPin && (
-                    <>
-                        <View style={styles.pinContainer}>
-                            {[1, 2, 3, 4].map((i) => (
-                                <View
-                                    key={i}
-                                    style={[
-                                        styles.pinDot,
-                                        pin.length >= i && styles.pinDotFilled,
-                                    ]}
-                                />
-                            ))}
-                        </View>
-
-                        <View style={styles.keypad}>
-                            <View style={styles.row}>
-                                {['1', '2', '3'].map(renderDigit)}
-                            </View>
-                            <View style={styles.row}>
-                                {['4', '5', '6'].map(renderDigit)}
-                            </View>
-                            <View style={styles.row}>
-                                {['7', '8', '9'].map(renderDigit)}
-                            </View>
-                            <View style={styles.row}>
-                                <View style={styles.digitButtonEmpty} />
-                                {renderDigit('0')}
-                                <TouchableOpacity
-                                    style={styles.digitButton}
-                                    onPress={handleDelete}
-                                >
-                                    <Text style={styles.deleteText}>⌫</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </>
-                )}
-
-                {/* Toggle between methods */}
-                <TouchableOpacity
-                    style={styles.switchButton}
-                    onPress={() => {
-                        setPin('');
-                        if (showManualPin) {
-                            setShowManualPin(false);
-                            authenticateWithDevice();
-                        } else {
-                            setShowManualPin(true);
-                        }
-                    }}
-                >
-                    {showManualPin ? (
-                        <Smartphone size={16} color={COLORS.primary} />
-                    ) : (
-                        <Lock size={16} color={COLORS.primary} />
-                    )}
-                    <Text style={styles.switchText}>
-                        {showManualPin ? 'Use Device Lock Instead' : 'Use PIN Instead'}
-                    </Text>
-                </TouchableOpacity>
             </View>
         </SafeAreaView>
     );
@@ -239,56 +139,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: COLORS.textSecondary,
     },
-    pinContainer: {
-        flexDirection: 'row',
-        marginBottom: 60,
-    },
-    pinDot: {
-        width: 16,
-        height: 16,
-        borderRadius: 8,
-        borderWidth: 2,
-        borderColor: COLORS.primary,
-        marginHorizontal: 12,
-    },
-    pinDotFilled: {
-        backgroundColor: COLORS.primary,
-    },
-    keypad: {
-        width: '100%',
-        maxWidth: 300,
-    },
-    row: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 20,
-    },
-    digitButton: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        backgroundColor: COLORS.white,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    digitButtonEmpty: {
-        width: 70,
-        height: 70,
-    },
-    digitText: {
-        fontSize: 24,
-        fontWeight: '600',
-        color: COLORS.text,
-    },
-    deleteText: {
-        fontSize: 24,
-        color: COLORS.text,
-    },
     biometricButton: {
         alignItems: 'center',
         justifyContent: 'center',
@@ -319,18 +169,5 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         textAlign: 'center',
         lineHeight: 18,
-    },
-    switchButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 24,
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        gap: 6,
-    },
-    switchText: {
-        fontSize: 14,
-        color: COLORS.primary,
-        fontWeight: '600',
     },
 });

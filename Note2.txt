@@ -1,0 +1,18 @@
+Build Credentials RHsbAcf4G1
+
+√ What do you want to do? » Download existing keystore
+√ Do you want to display the sensitive information of the Android Keystore? ... yes
+Saving Keystore to @tanayp11__MobileExpenseManagement.jks
+Type                JKS
+Key Alias           564a11e12969b452f431c33e4cb5a67f
+MD5 Fingerprint     B1:68:FD:F4:EC:F8:08:99:D7:08:47:12:28:87:46:86
+SHA1 Fingerprint    3A:16:32:85:32:A5:BC:6E:69:6F:B6:AD:4F:D4:AB:6B:59:67:72:7E
+SHA256 Fingerprint  A2:19:C7:74:19:A8:BF:5E:E4:41:AE:4D:AB:C9:80:3A:3E:80:A5:C6:2E:79:37:7A:D4:D1:FA:BD:2D:C9:3E:53
+Updated             22 seconds ago
+
+Sensitive Keystore information:
+    Keystore password: 9667745db7e9cd81837a6e3ff72d6d79
+    Key alias:         564a11e12969b452f431c33e4cb5a67f
+    Key password:      267d530f0c70f0330c015068d076ad36
+
+    Path to Keystore:  @tanayp11__MobileExpenseManagement.jks

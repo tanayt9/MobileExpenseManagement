@@ -2,7 +2,7 @@
   "expo": {
     "name": "MobileExpenseManagement",
     "slug": "MobileExpenseManagement",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobileexpensemanagement",
@@ -18,6 +18,7 @@
     },
     "android": {
       "package": "com.tanayp.mobileexpensemanagement",
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
